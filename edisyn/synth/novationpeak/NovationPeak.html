@@ -1,0 +1,42 @@
+<html><head></head>
+<body>
+<h1>Novation Peak</h1>
+<h2>Firmware 2.1</h2>
+
+<p>Written by Adam Schabtach. The parameter map was measured on a Peak running firmware
+2.1.0.8: every editable parameter was swept over CC/NRPN and confirmed in the patch dump.
+The editor's parameter tables are generated from that measured map.
+
+<h3>This editor never writes to the Peak's memory</h3>
+
+<p>It sends only edit-buffer writes (which are lost when you change patch or power off),
+patch requests and the parameters' CC/NRPN messages. <b>Write to Patch</b> and the
+librarian's bank writes are disabled. To store a patch, save it to disk and write it with
+<tt>peaktool write &lt;file.syx&gt; --slot D127 --allow-flash-write</tt> (from the peak-editor
+project), which backs up the slot first and verifies the write.
+
+<h3>Notes</h3>
+<ul>
+<li>Requesting a stored patch reads it directly by bank and number. No program change is
+sent, so the Peak's display does not follow the patch shown here. Use <b>Send to Current
+Patch</b> to hear it.
+<li>Parameter changes are sent live as CC/NRPN, as the Peak's own panel sends them. Settings
+that exist only in the Peak's menus (FX matrix, LFO 3/4 wave and rate, arp clock rate, Osc 2
+ModEnv2 &gt; Pitch, the patch name) are sent as a whole edit-buffer patch a moment after you
+stop changing them. The Peak stops any held note when it receives a whole patch, so play the note
+again after changing one of these.
+<li>Not editable: Reverb Type and Size (changing one also changes the other), Animate 1/2
+Hold (no stored value found), user wavetables and global settings. Their stored bytes, and
+every byte of the patch this editor doesn't model, are kept unchanged.
+<li>Values the Peak stores outside the documented range (for example Arp Chance 0 in
+patches from firmware 1.x) are kept as they are and shown as "(raw N)" in menus.
+<li>Randomize, hill-climbing and morph leave the name, category, genre, tempo, levels,
+tuning, voice and arp settings alone by default (see Edit Mutable Parameters), and keep
+at least one oscillator, noise or ring level audible.
+<li>Pitch stays locked: by default they also leave Fixed Note, the oscillators' LFO 2 and
+ModEnv 2 pitch amounts and Pre-Glide alone, and never create, change or remove a mod-matrix
+routing to an oscillator pitch destination. (An empty mod-matrix slot points at O123Ptch, so a
+mutated depth alone would transpose the patch.) Existing pitch modulation is kept as it is.
+<li>Turning the Peak's knobs does not update this editor yet.
+</ul>
+</body></html>
