@@ -98,7 +98,7 @@ public class NovationPeak extends Synth
 
         buildLayout();
 
-        // Parameters without a widget (unverified, coupled): stored and sent, never edited or mutated.
+        // Parameters without a widget (unverified): stored and sent, never edited or mutated.
         for (NovationPeakParams.P p : NovationPeakParams.PARAMS)
             {
             if (!p.editable)
@@ -429,6 +429,8 @@ public class NovationPeak extends Synth
             scheduleDump();   // out-of-chart values ("raw N" choices) are never sent as CC/NRPN
             return new Object[0];
             }
+        // A coupled parameter (Reverb Type/Size) also changes another one on the Peak: re-read it.
+        if (p.coupled && (getSendMIDI() || captureOutgoing != null)) scheduleRefetch();
         return controlMessages(p, v, getChannelOut());
         }
 
@@ -569,11 +571,123 @@ public class NovationPeak extends Synth
     public int getPatchNameLength() { return NAME_LENGTH; }
 
     // ======================================================================================
-    // Incoming: raw CCs, so a knob that sends CC 38 is never mistaken for NRPN data entry.
-    // Following the panel is not implemented yet; incoming CC/NRPN is ignored.
+    // Incoming: following the Peak's panel.
+    //
+    // Raw CCs, so a knob that sends CC 38 is never mistaken for NRPN data entry. The rules are
+    // those of peak-editor's IncomingControl (formats captured in its Phase 0):
+    //   - plain CC: the value;
+    //   - CC pair (8-bit values): MSB = value >> 1, then LSB 0x40 = low bit. The MSB is applied
+    //     at once (keeping the current low bit) and the LSB completes it only if it directly
+    //     follows its own MSB;
+    //   - NRPN: 99 (MSB), 98 (LSB), then 6 (data, 7 bits). No CC 38.
+    // Only messages on the editor's channel count. Edisyn turns MIDI output off while this
+    // runs, so a knob move is never echoed back to the Peak.
+    //
+    // Reverb Type and Size are coupled (each changes the other on the Peak), so a move of either,
+    // from the panel or from this editor, re-reads the edit buffer (0x40) shortly afterwards, as
+    // the JUCE editor does. That keeps both stored bytes current, so a later whole-patch send
+    // can't undo the move.
+
+    static final Map<Integer, NovationPeakParams.P> IN_CC = new HashMap<>();
+    static final Map<Integer, NovationPeakParams.P> IN_PAIR_MSB = new HashMap<>();
+    static final Map<Integer, NovationPeakParams.P> IN_PAIR_LSB = new HashMap<>();
+    static final Map<Integer, NovationPeakParams.P> IN_NRPN = new HashMap<>();
+    static
+        {
+        for (NovationPeakParams.P p : NovationPeakParams.PARAMS)
+            {
+            if (p.editable)
+                {
+                switch (p.route)
+                    {
+                    case NovationPeakParams.ROUTE_CC: IN_CC.put(p.cc, p); break;
+                    case NovationPeakParams.ROUTE_CC_PAIR: IN_PAIR_MSB.put(p.cc, p); IN_PAIR_LSB.put(p.ccLsb, p); break;
+                    case NovationPeakParams.ROUTE_NRPN: IN_NRPN.put(nrpnNumber(p.nrpnMsb, p.nrpnLsb), p); break;
+                    // Sent as a dump but still transmitted by the panel: Osc 2 ModEnv2 > Pitch (CC 38).
+                    case NovationPeakParams.ROUTE_DUMP: if (p.cc >= 0 && p.ccLsb < 0) IN_CC.put(p.cc, p); break;
+                    default: break;
+                    }
+                }
+            }
+        }
+
+    static int nrpnNumber(int msb, int lsb) { return (msb << 7) | lsb; }
+
+    /** Re-reads the edit buffer after a coupled parameter moved. */
+    static final int REFETCH_DELAY_MS = 300;
+    javax.swing.Timer refetchTimer;
+    int refetchesScheduled = 0;     // for PeakHarness
+
+    // Parser state.
+    int inNrpnMsb = -1, inNrpnLsb = -1;
+    NovationPeakParams.P inPendingPair = null;      // CC pair whose MSB was the last message
 
     public boolean getExpectsRawCCFromSynth() { return true; }
-    public void handleSynthCCOrNRPN(Midi.CCData data) { }
+
+    public void handleSynthCCOrNRPN(Midi.CCData data)
+        {
+        if (data == null || data.type != Midi.CCDATA_TYPE_RAW_CC || data.channel != getChannelOut()) return;
+        int cc = data.number & 0x7F, value = data.value & 0x7F;
+
+        // The LSB of a pending pair completes it; anything else ends the pair.
+        NovationPeakParams.P pair = inPendingPair;
+        inPendingPair = null;
+        if (pair != null && IN_PAIR_LSB.get(cc) == pair)
+            {
+            int v = (model.get(pair.key, 0) & ~1) | ((value & 0x40) != 0 ? 1 : 0);
+            setIncoming(pair, v);
+            return;
+            }
+
+        if (cc == 99) { inNrpnMsb = value; return; }
+        if (cc == 98) { inNrpnLsb = value; return; }
+        if (cc == 6)
+            {
+            if (inNrpnMsb < 0 || inNrpnLsb < 0) return;
+            int n = nrpnNumber(inNrpnMsb, inNrpnLsb);
+            NovationPeakParams.P p = IN_NRPN.get(n);
+            if (p != null) setIncoming(p, value);
+            return;
+            }
+
+        NovationPeakParams.P p = IN_PAIR_MSB.get(cc);
+        if (p != null)
+            {
+            setIncoming(p, (value << 1) | (model.get(p.key, 0) & 1));
+            inPendingPair = p;
+            return;
+            }
+
+        p = IN_CC.get(cc);
+        if (p != null) setIncoming(p, value);
+        }
+
+    void setIncoming(NovationPeakParams.P p, int v)
+        {
+        model.set(p.key, Math.max(p.storeMin, Math.min(p.storeMax, v)));
+        if (p.coupled) scheduleRefetch();
+        }
+
+    void scheduleRefetch()
+        {
+        refetchesScheduled++;
+        if (refetchTimer == null)
+            {
+            refetchTimer = new javax.swing.Timer(REFETCH_DELAY_MS, e -> sendRefetch());
+            refetchTimer.setRepeats(false);
+            }
+        refetchTimer.restart();
+        }
+
+    /** Sends the pending edit-buffer request now (the refetch timer calls this). */
+    void sendRefetch()
+        {
+        if (refetchTimer != null) refetchTimer.stop();
+        if (dumpTimer.isRunning()) { scheduleRefetch(); return; }  // let our own pending dump land first
+        // While the Librarian tab is showing, Edisyn would file the reply in the library instead.
+        if (librarianPane != null && tabs.getSelectedComponent() == librarianPane) return;
+        tryToSendSysex(requestCurrentDump());
+        }
 
     // ======================================================================================
     // Exploration policy

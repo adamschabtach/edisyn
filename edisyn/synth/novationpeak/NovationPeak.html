@@ -25,7 +25,11 @@ that exist only in the Peak's menus (FX matrix, LFO 3/4 wave and rate, arp clock
 ModEnv2 &gt; Pitch, the patch name) are sent as a whole edit-buffer patch a moment after you
 stop changing them. The Peak stops any held note when it receives a whole patch, so play the note
 again after changing one of these.
-<li>Not editable: Reverb Type and Size (changing one also changes the other), Animate 1/2
+<li>Reverb Type and Size (FX tab, Reverb) are linked on the Peak: choosing a type also sets
+the size, and the size can move the type. Either one is sent live, then the patch is re-read
+from the Peak, so both show what the Peak now has. Randomize, hill-climbing and morph never
+change them.
+<li>Not editable: Animate 1/2
 Hold (no stored value found), user wavetables and global settings. Their stored bytes, and
 every byte of the patch this editor doesn't model, are kept unchanged.
 <li>Values the Peak stores outside the documented range (for example Arp Chance 0 in
@@ -37,6 +41,10 @@ at least one oscillator, noise or ring level audible.
 ModEnv 2 pitch amounts and Pre-Glide alone, and never create, change or remove a mod-matrix
 routing to an oscillator pitch destination. (An empty mod-matrix slot points at O123Ptch, so a
 mutated depth alone would transpose the patch.) Existing pitch modulation is kept as it is.
-<li>Turning the Peak's knobs does not update this editor yet.
+<li>Turning the Peak's knobs and buttons updates this editor (CC, 8-bit CC pairs and NRPN, on
+the editor's MIDI channel). Changes made only in the Peak's menus send nothing, so use
+<b>Request Current Patch</b> after them, and after changing patch on the Peak. Moving Reverb
+Type or Size re-reads the patch from the Peak, because each changes the other (not while the
+Librarian tab is showing, where the reply would be filed in the library).
 </ul>
 </body></html>

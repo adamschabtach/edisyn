@@ -337,6 +337,8 @@ final class NovationPeakLayout
         { "band" },
         { "category", "Reverb", "B", "", "" },
         { "row" },
+        { "param", "reverbtype", "Type" },
+        { "param", "reverbsize", "Size" },
         { "param", "reverblevel", "Level" },
         { "param", "reverbtime", "Time" },
         { "param", "reverbdampinglp", "Damping LP" },

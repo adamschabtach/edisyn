@@ -19,7 +19,8 @@ import javax.sound.midi.*;
 
    Round trip over every Peak patch in peak-editor's captures/ and backups/, CC/NRPN output
    against tests/fixtures/edisyn/control_vectors.json (peak-editor's ControlGuard), the
-   write guard, and the mutation policy. Exit status 0 when everything passes.
+   write guard, following the panel (incoming CC/NRPN), and the mutation policy. Exit status 0
+   when everything passes.
 */
 
 public class PeakHarness
@@ -63,6 +64,8 @@ public class PeakHarness
         System.out.println("control vectors: " + vectors + " cases");
         writeGuard(synth);
         System.out.println("write guard: done");
+        int incoming = incoming(synth);
+        System.out.println("incoming: " + incoming + " panel moves followed");
         policy(synth, repo);
         System.out.println("policy: done");
 
@@ -256,6 +259,8 @@ public class PeakHarness
             }
         synth.tryToSendMIDI(synth.emitAll("name"));
         synth.sendPendingDump();
+        check(synth.refetchesScheduled > 0, "a coupled edit (Reverb Type/Size) schedules a re-read");
+        if (synth.refetchTimer != null) synth.refetchTimer.stop();
 
         int dumps = 0, requests = 0, shorts = 0;
         for (Object o : sent)
@@ -302,6 +307,122 @@ public class PeakHarness
         check(synth.tryToSendMIDI(new ShortMessage(ShortMessage.CONTROL_CHANGE, 0, 123, 0)), "guard passes All Notes Off");
 
         synth.captureOutgoing = null;
+        }
+
+    // ------------------------------------------------------------------------------------
+    static void feed(NovationPeak synth, int channel, int cc, int value)
+        {
+        synth.handleSynthCCOrNRPN(new Midi.CCData(Midi.CCDATA_TYPE_RAW_CC, cc, value, channel, false));
+        }
+
+    static void feed(NovationPeak synth, Object[] messages)
+        {
+        for (Object o : messages)
+            {
+            ShortMessage m = (ShortMessage)o;
+            feed(synth, m.getChannel(), m.getData1(), m.getData2());
+            }
+        }
+
+    /** The panel's messages, as the editor itself would send them (checked against ControlGuard
+        by controlVectors), fed back in must set exactly that value; nothing is sent back. */
+    static int incoming(NovationPeak synth) throws Exception
+        {
+        Model model = synth.getModel();
+        List<Object> sent = new ArrayList<>();
+        synth.captureOutgoing = sent;
+        int followed = 0;
+
+        // The incoming maps must not overlap each other or the NRPN controllers.
+        Set<Integer> seen = new HashSet<>(Arrays.asList(99, 98, 6));
+        for (Map<Integer, NovationPeakParams.P> m : Arrays.asList(NovationPeak.IN_CC, NovationPeak.IN_PAIR_MSB, NovationPeak.IN_PAIR_LSB))
+            for (int cc : m.keySet()) check(seen.add(cc), "incoming CC " + cc + " is mapped twice");
+
+        for (NovationPeakParams.P p : NovationPeakParams.PARAMS)
+            {
+            if (!p.editable) continue;
+            boolean viaCC38 = p.route == NovationPeakParams.ROUTE_DUMP && p.cc >= 0;
+            if (p.route != NovationPeakParams.ROUTE_CC && p.route != NovationPeakParams.ROUTE_CC_PAIR
+                && p.route != NovationPeakParams.ROUTE_NRPN && !viaCC38) continue;
+
+            int mid = (p.chartMin + p.chartMax) / 2;
+            int[] values = { p.chartMin, p.chartMax, mid, mid + 1 < p.chartMax ? mid + 1 : mid, p.def };
+            for (int v : values)
+                {
+                if (v < p.chartMin || v > p.chartMax) continue;
+                int other = v == p.chartMin ? p.chartMax : p.chartMin;
+                model.set(p.key, other);
+                Object[] msgs = viaCC38
+                    ? new Object[] { new ShortMessage(ShortMessage.CONTROL_CHANGE, 0, p.cc, v) }
+                    : NovationPeak.controlMessages(p, v, 0);
+                check(msgs.length > 0, p.key + " = " + v + ": no messages to feed");
+                feed(synth, msgs);
+                check(model.get(p.key, -1) == v, p.key + ": panel sent " + v + ", editor shows " + model.get(p.key, -1));
+                followed++;
+
+                // The same move on another channel is ignored.
+                model.set(p.key, other);
+                for (Object o : msgs)
+                    {
+                    ShortMessage m = (ShortMessage)o;
+                    feed(synth, 1, m.getData1(), m.getData2());
+                    }
+                check(model.get(p.key, -1) == other, p.key + ": a move on channel 2 was followed");
+                }
+
+            if (p.route == NovationPeakParams.ROUTE_CC_PAIR)
+                {
+                // MSB alone: applied at once, keeping the low bit.
+                model.set(p.key, 1);
+                feed(synth, 0, p.cc, 0x30);
+                check(model.get(p.key, -1) == (0x30 << 1 | 1), p.key + ": MSB alone gives " + model.get(p.key, -1));
+                // An LSB that doesn't directly follow its MSB is ignored.
+                feed(synth, 0, 99, 0);
+                feed(synth, 0, p.ccLsb, 0);
+                check(model.get(p.key, -1) == (0x30 << 1 | 1), p.key + ": stray LSB changed the value");
+                }
+            }
+
+        if (synth.refetchTimer != null) synth.refetchTimer.stop();
+
+        // Reverb Type / Size are coupled: a move sets the value and re-reads the edit buffer once,
+        // so the other one is picked up too.
+        List<String> coupled = new ArrayList<>();
+        for (NovationPeakParams.P p : NovationPeakParams.PARAMS) if (p.coupled) coupled.add(p.key);
+        check(coupled.equals(Arrays.asList("reverbtype", "reverbsize")), "coupled parameters: " + coupled);
+        for (String k : coupled)
+            {
+            NovationPeakParams.P p = NovationPeak.BY_KEY.get(k);
+            check(p.editable && p.immutable && p.route == NovationPeakParams.ROUTE_NRPN, k + ": coupled but not an immutable NRPN control");
+            model.set(k, p.chartMin);
+            int scheduled = synth.refetchesScheduled;
+            feed(synth, NovationPeak.controlMessages(p, p.chartMax, 0));
+            check(model.get(k, -1) == p.chartMax, k + ": panel move not followed");
+            check(synth.refetchesScheduled > scheduled && synth.refetchTimer.isRunning(), k + ": panel move doesn't schedule a re-read");
+            check(sent.isEmpty(), k + ": a panel move sent " + sent.size() + " message(s) before the re-read");
+            synth.sendRefetch();
+            check(sent.size() == 1 && sent.get(0) instanceof byte[] && ((byte[])sent.get(0)).length == NovationPeak.REQUEST_LENGTH
+                && ((byte[])sent.get(0))[8] == NovationPeak.CMD_REQUEST_EDIT, k + ": re-read sends exactly one 0x40 request");
+            sent.clear();
+
+            // Edited here: sent live as NRPN, then re-read.
+            scheduled = synth.refetchesScheduled;
+            model.set(k, p.chartMin);
+            Object[] out = synth.emitAll(k);
+            check(out.length == 3 && synth.refetchesScheduled > scheduled, k + ": an edit here isn't sent live and re-read");
+            synth.refetchTimer.stop();
+            }
+
+        // Unknown CCs, Animate Hold (no stored byte) and NRPNs for global settings are ignored.
+        sent.clear();
+        Model snap = model.copy();
+        feed(synth, 0, 114, 127);           // Animate 1 Hold
+        feed(synth, 0, 99, 64); feed(synth, 0, 98, 3); feed(synth, 0, 6, 10);   // Aftertouch Scale (global)
+        for (String k : model.getKeys()) check(model.get(k, 0) == snap.get(k, 0), "ignored message changed " + k);
+        check(sent.isEmpty() && (synth.refetchTimer == null || !synth.refetchTimer.isRunning()), "ignored message sent something");
+
+        synth.captureOutgoing = null;
+        return followed;
         }
 
     // ------------------------------------------------------------------------------------
