@@ -1,0 +1,84 @@
+<html>
+<head><title>Roland XV-5050</title></head>
+<body>
+<h2>Roland XV-5050</h2>
+
+<p>This is an editor for the <b>Patch</b> mode of the Roland XV-5050. It edits all
+948 bytes of a patch: Patch Common, the MFX / Chorus / Reverb headers, the Tone Mix
+Table, the four Matrix Controls and the four Tones, and it includes a librarian for
+the 128 USER patches and the eight preset banks.
+
+<p>The XV-5050 shares Roland's model ID <tt>00 10</tt> with the XV-3080 and XV-5080, so
+this editor will probably load their patches too. It has only been developed against
+the XV-5050's documentation.
+
+<h3>Before you start</h3>
+
+<p>On the synthesizer, set <b>SYSTEM &gt; MIDI&amp;USB &gt; Rx Exclusive</b> to
+<b>ON</b> and <b>Protect Exclusive</b> to <b>OFF</b> (Owner's Manual p.105). Set
+Edisyn's <b>Device ID</b> to the number shown as the synth's Device ID, which is 17
+by default and may be anything from 17 to 32.
+
+<p>The patch edit buffer the editor writes to only exists in <b>Patch</b> mode, so the
+editor switches the synth to Patch mode before requesting or sending a patch. If you
+were in Performance mode, you will find yourself in Patch mode afterwards.
+
+<h3>Effects are raw slots for now</h3>
+
+<p>An XV-5050 effect is a type number plus 32 (MFX), 12 (Chorus) or 20 (Reverb)
+general-purpose parameter slots. What each slot <i>means</i> depends on the type, and
+the Owner's Manual documents the names and value ranges of each effect's parameters
+without saying which slot holds which. Nothing published, as far as I can tell, closes
+that gap.
+
+<p>So the <b>MFX</b> and <b>Chorus / Reverb</b> tabs show the effect type by name and
+then the raw slots, as numbers from &minus;20000 to +20000. Set the type on the
+synth's own panel, read the patch back into Edisyn, and the slots will hold whatever
+the synth put there. Editing a slot does what it does. This is unsatisfying but
+honest, and patches round-trip exactly, so nothing is lost by it. Mapping the slots
+to named controls means measuring all 90 MFX types on the hardware; that is the next
+piece of work.
+
+<p>For the same reason, mutation and crossover leave the effect slots alone to begin
+with, and the three effect <i>type</i> parameters are never mutated at all: changing a
+type re-interprets every slot under it.
+
+<h3>Waves</h3>
+
+<p>The Wave L/Mono and Wave R choosers list all 1083 internal waves by name. If an
+SRX expansion board is fitted, its waves are numbered beyond 1083, and this editor
+clamps them to 1083 when it reads such a patch &mdash; it would alter the patch.
+Patches that use only internal waves are unaffected. Add SRX support before using
+this editor with a board fitted.
+
+<h3>Not yet tested against hardware</h3>
+
+<p>Everything here was built from the Owner's Manual and verified offline: the
+parameter table tiles each block exactly, and patches survive emit &rarr; parse &rarr;
+emit byte-identically. None of it has been run against an XV-5050 yet. In particular
+these are unverified:
+
+<ul>
+<li>that one request for the whole patch returns all nine blocks, rather than needing
+one request per block;</li>
+<li>the pauses after a patch change, after a Patch-mode switch, and between the nine
+messages of a patch send;</li>
+<li>that a write to a USER address stores the patch permanently;</li>
+<li>the encoding of the control-source lists (MFX Control Source, Matrix Control
+Source), where the manual's list is one shorter than the stored range and CC32 appears
+to be a hole;</li>
+<li>the Patch Category list, and the tempo-synced note values that Tone Delay Time and
+LFO Rate take above 127;</li>
+<li>the Wave Group ID the synth reports for internal waves;</li>
+<li>the GM2 banks' bank-select numbers, which is why the librarian is marked untested.</li>
+</ul>
+
+<p>The Rhythm and Performance editors are not written yet.
+
+<h3>Credits</h3>
+
+<p>Editor by Adam Schabtach, built on Sean Luke's Edisyn. The parameter table and
+layout are generated from the Owner's Manual's parameter address map.
+
+</body>
+</html>
