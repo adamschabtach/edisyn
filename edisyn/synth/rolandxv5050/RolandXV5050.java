@@ -663,6 +663,14 @@ public class RolandXV5050 extends Synth
        Nothing needs to settle after the synth has finished sending us a dump. Edisyn's
        default is to inherit {@link #getPauseAfterChangePatch}, which would spend 300 ms
        of every librarian download tick waiting for no reason.
+
+       <p>Despite its name, three of Edisyn's four uses of this are a pause before the
+       next thing it <i>sends</i> -- ahead of <tt>sendAllParameters()</tt> after a parse
+       or a random merge, and ahead of <tt>performRequestDump()</tt> when blending. Zero
+       is still right for all of them, because each already carries its own settle time:
+       our emit stream opens with the Sound Mode switch and
+       {@link #PAUSE_AFTER_MODE_SWITCH}, and a request adds
+       {@link #getPauseAfterChangePatch} on top of that.
     */
     public int getPauseAfterReceivePatch() { return 0; }
 
