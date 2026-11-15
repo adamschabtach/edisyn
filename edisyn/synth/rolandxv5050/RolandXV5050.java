@@ -656,10 +656,23 @@ public class RolandXV5050 extends Synth
         catch (Exception e) { Synth.handleException(e); }
         }
 
-    /** [HW] tune. */
+    /** Measured as 50 ms on the hardware; kept generous as margin. */
     public int getPauseAfterChangePatch() { return 300; }
-    /** [HW] tune. */
+    /** No pause was measurable for a send to the edit buffer; kept as margin. */
     public int getPauseAfterSendAllParameters() { return 150; }
+
+    /**
+       Writing to stored memory is different from writing to the edit buffer: the
+       synth needs about a second to commit it, and until it has, a read of that
+       location returns only its first block. Spacing between the nine messages turns
+       out not to matter -- 20 ms is fine -- but reading back too soon fails every
+       time. Measured on the hardware, 2026-11-15: 0.5 s failed 0/3 at every spacing
+       tried, 1.0 s passed 3/3 even at 20 ms spacing.
+
+       <p>This also paces the librarian's bank uploads, through
+       {@link #getPauseBetweenPatchWrites}, which defaults to this.
+    */
+    public int getPauseAfterWritePatch() { return 1200; }
 
     // ======================================================================================
     // Banks and locations
