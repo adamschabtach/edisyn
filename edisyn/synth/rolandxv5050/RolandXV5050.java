@@ -440,7 +440,7 @@ public class RolandXV5050 extends Synth
             int v = RolandXV5050Sysex.decode(p, data, start);
             if (v > p.max)
                 {
-                // Only reachable for wave numbers on an SRX-equipped unit; see the .html.
+                // A safety net: nothing in the address map should exceed its range.
                 System.err.println("RolandXV5050.parse(): " + p.key + " = " + v
                     + " exceeds " + p.max + "; clamped.");
                 v = p.max;
@@ -698,6 +698,20 @@ public class RolandXV5050 extends Synth
     public boolean patchLocationEquals(Model a, Model b)
         {
         return a.get("bank", -1) == b.get("bank", -2) && a.get("number", -1) == b.get("number", -2);
+        }
+
+    /**
+       Wave numbers are modelled over the manual's full 0...16384, because factory
+       patches carry expansion wave numbers in switched-off tones and clamping them
+       would alter the patch. Mutation, though, should only ever land on a wave this
+       editor can name.
+    */
+    public int reviseMutatedValue(String key, int oldValue, int proposedValue, Model model)
+        {
+        RolandXV5050Params.P p = BY_KEY.get(key);
+        if (p != null && p.kind == RolandXV5050Params.KIND_WAVE && proposedValue > RolandXV5050Params.WAVE_MAX)
+            return RolandXV5050Params.WAVE_MAX;
+        return proposedValue;
         }
 
     public boolean gatherPatchInfo(String title, Model change, boolean writing)

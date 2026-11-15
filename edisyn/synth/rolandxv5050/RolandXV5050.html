@@ -45,11 +45,16 @@ type re-interprets every slot under it.
 
 <h3>Waves</h3>
 
-<p>The Wave L/Mono and Wave R choosers list all 1083 internal waves by name. If an
-SRX expansion board is fitted, its waves are numbered beyond 1083, and this editor
-clamps them to 1083 when it reads such a patch &mdash; it would alter the patch.
-Patches that use only internal waves are unaffected. Add SRX support before using
-this editor with a board fitted.
+<p>The Wave L/Mono and Wave R choosers list all 1083 internal waves by name. The
+stored range runs to 16384, because wave numbers above the internal set belong to SR-JV80
+and SRX expansion boards, whose wave names are not in the XV-5050's manual. Such numbers
+do turn up in the factory patches: user patch 79 carries an SRX wave on a switched-off
+Tone 3, and another patch an SR-JV80 wave, which is a board the XV-5050 cannot even take.
+
+<p>The editor stores and re-sends those values exactly, so patches round-trip unaltered.
+It simply cannot put a name to them: the chooser falls back to showing its last entry for
+a wave outside the internal list. If you fit an expansion board and want its waves named,
+that needs wave lists from the board's own manual.
 
 <h3>Not yet tested against hardware</h3>
 

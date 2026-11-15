@@ -69,6 +69,7 @@ public class XV5050Harness
         mutationPolicy(synth);
         roundTripDefaults(synth);
         roundTripRandom(synth);
+        expansionWaveNumbers(synth);
         singleParameterEdits(synth);
         recognizer(synth);
 
@@ -115,8 +116,21 @@ public class XV5050Harness
                     + p.bytes + (p.nibbled ? " nibbled" : " plain") + " byte(s)");
 
                 if (p.labels != null)
-                    check(p.labels.length == p.max - p.min + 1,
-                        p.key + ": " + p.labels.length + " labels for range " + p.min + ".." + p.max);
+                    {
+                    if (p.kind == RolandXV5050Params.KIND_WAVE)
+                        {
+                        // The chooser names the internal waves; the model's range runs
+                        // further, because factory patches carry expansion wave numbers.
+                        check(p.labels.length == RolandXV5050Params.WAVE_MAX + 1,
+                            p.key + ": " + p.labels.length + " wave labels, expected "
+                            + (RolandXV5050Params.WAVE_MAX + 1));
+                        check(p.max >= RolandXV5050Params.WAVE_MAX,
+                            p.key + ": max " + p.max + " cannot hold every internal wave");
+                        }
+                    else
+                        check(p.labels.length == p.max - p.min + 1,
+                            p.key + ": " + p.labels.length + " labels for range " + p.min + ".." + p.max);
+                    }
                 if (p.widget != RolandXV5050Params.WIDGET_DIAL)
                     check(p.labels != null, p.key + ": a chooser or checkbox without labels");
                 }
@@ -379,6 +393,46 @@ public class XV5050Harness
 
             byte[] second = emitToFile(synth);
             check(Arrays.equals(first, second), "a random patch round-trips byte-identically (trial " + trial + ")");
+            }
+        synth.loadDefaults();
+        }
+
+    /**
+       User patch 79 on the hardware carries an SRX wave number of 16384 on a
+       switched-off Tone 3. The editor must keep it, not clamp it to the last
+       internal wave.
+    */
+    static void expansionWaveNumbers(RolandXV5050 synth) throws Exception
+        {
+        Model m = synth.getModel();
+        for (String key : new String[] { "tone3wavenumberlmono", "tone1wavenumberr" })
+            {
+            RolandXV5050Params.P p = RolandXV5050.BY_KEY.get(key);
+            check(p.max >= 16384, key + ": max is " + p.max + ", too small for an expansion wave");
+            }
+
+        m.set("tone3wavegrouptype", 2);                 // SRX
+        m.set("tone3wavegroupid", 3);
+        m.set("tone3wavenumberlmono", 16384);
+        m.set("tone4wavegrouptype", 1);                 // SR-JV80
+        m.set("tone4wavenumberlmono", 5000);
+
+        byte[] first = emitToFile(synth);
+        check(synth.parse(first, true) == Synth.PARSE_SUCCEEDED, "a patch with expansion waves parses");
+        check(m.get("tone3wavenumberlmono", -1) == 16384,
+            "wave 16384 survived, got " + m.get("tone3wavenumberlmono", -1));
+        check(m.get("tone3wavegroupid", -1) == 3, "the SRX group ID survived");
+        check(m.get("tone4wavenumberlmono", -1) == 5000,
+            "wave 5000 survived, got " + m.get("tone4wavenumberlmono", -1));
+        check(Arrays.equals(first, emitToFile(synth)),
+            "a patch with expansion wave numbers round-trips byte-identically");
+
+        // Mutation must still only ever propose a wave the editor can name.
+        for (int i = 0; i < 200; i++)
+            {
+            int proposed = synth.reviseMutatedValue("tone3wavenumberlmono", 1, 16000, m);
+            check(proposed >= 0 && proposed <= RolandXV5050Params.WAVE_MAX,
+                "mutation proposed wave " + proposed + ", outside 0.." + RolandXV5050Params.WAVE_MAX);
             }
         synth.loadDefaults();
         }
