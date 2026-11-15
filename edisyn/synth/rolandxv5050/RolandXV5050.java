@@ -40,12 +40,17 @@ import javax.swing.*;
 
 public class RolandXV5050 extends Synth
     {
+    /**
+       GM2 is deliberately absent. Selecting bank 121 leaves nothing readable in the
+       Patch-mode temporary patch -- GM2 tones are not XV patches -- so the librarian
+       cannot download them. Verified on the hardware, 2026-11-15.
+    */
     static final String[] BANKS =
-        { "USER", "PR-A", "PR-B", "PR-C", "PR-D", "PR-E", "PR-F", "PR-G", "PR-H", "GM2-A", "GM2-B" };
+        { "USER", "PR-A", "PR-B", "PR-C", "PR-D", "PR-E", "PR-F", "PR-G", "PR-H" };
     /** Bank select MSB per bank. */
-    static final int[] BANK_MSB = { 87, 87, 87, 87, 87, 87, 87, 87, 87, 121, 121 };
+    static final int[] BANK_MSB = { 87, 87, 87, 87, 87, 87, 87, 87, 87 };
     /** Bank select LSB per bank. */
-    static final int[] BANK_LSB = {  0, 64, 65, 66, 67, 68, 69, 70, 71,   0,   1 };
+    static final int[] BANK_LSB = {  0, 64, 65, 66, 67, 68, 69, 70, 71 };
     static final int BANK_USER = 0;
     static final int PATCHES_PER_BANK = 128;
 
@@ -586,6 +591,13 @@ public class RolandXV5050 extends Synth
     // ======================================================================================
     // Requesting
 
+    /**
+       Read the patch the synth is playing now.
+
+       <p>Note that 1F 00 00 00 only exists when a <i>patch</i> is selected. With a
+       rhythm set selected -- bank 86 or 120 -- the synth answers nothing at all, and
+       the request appears to time out. Verified on the hardware, 2026-11-15.
+    */
     public byte[] requestCurrentDump()
         {
         // 1F 00 00 00 is the patch edit buffer only in Patch mode.
