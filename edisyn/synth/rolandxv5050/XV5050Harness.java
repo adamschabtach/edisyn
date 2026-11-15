@@ -315,6 +315,36 @@ public class XV5050Harness
     // ------------------------------------------------------------------ round trips
 
     /** The sysex of emitAll(..., toFile = true), concatenated. */
+    /** Concatenate messages the way Edisyn's flatten() does. */
+    static byte[] flattenMessages(byte[][] messages)
+        {
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        for (byte[] m : messages) b.write(m, 0, m.length);
+        return b.toByteArray();
+        }
+
+    /** All but one of a patch's messages. */
+    static byte[][] drop(byte[][] messages, int index)
+        {
+        byte[][] out = new byte[messages.length - 1][];
+        for (int i = 0, at = 0; i < messages.length; i++)
+            if (i != index) out[at++] = messages[i];
+        return out;
+        }
+
+    /** The current patch's nine blocks, readdressed to a user patch location. */
+    static byte[][] userPatchMessages(RolandXV5050 synth, int number)
+        {
+        byte[][] out = new byte[RolandXV5050Params.PATCH.length][];
+        for (int i = 0; i < out.length; i++)
+            {
+            RolandXV5050Params.Block b = RolandXV5050Params.PATCH[i];
+            out[i] = RolandXV5050Sysex.dt1((byte)0x10,
+                RolandXV5050Sysex.userPatch(number) + (b.address << 7), new byte[b.size]);
+            }
+        return out;
+        }
+
     static byte[] emitToFile(RolandXV5050 synth)
         {
         Object[] out = synth.emitAll(synth.getModel(), false, true);
@@ -491,6 +521,48 @@ public class XV5050Harness
         for (int i = 0; i < 9; i++) { two[i] = messages[i]; two[i + 9] = messages[i]; }
         check(RolandXV5050Rec.getNextSysexPatchGroup(two, 0) == 9, "the first of two patches is nine messages");
         check(RolandXV5050Rec.getNextSysexPatchGroup(two, 9) == 18, "the second of two patches is nine messages");
+
+        // The whole patch as one flat buffer, which is what sendToLibrarian() hands the
+        // recognizers: it flattens emitAll() before asking, so a nine-message patch has
+        // to be recognized unsplit or the librarian files it under no synth at all.
+        byte[] flat = emitToFile(synth);
+        check(RolandXV5050Rec.recognize(flat),
+            "the recognizer claims a whole patch flattened into one buffer");
+        check(RolandXV5050Rec.recognize(flattenMessages(userPatchMessages(synth, 42))),
+            "the recognizer claims a flattened patch at a user address");
+        // Through Synth.recognize(), by reflection, exactly as the librarian reaches it.
+        check(Synth.recognize("edisyn.synth.rolandxv5050.RolandXV5050", flat),
+            "Synth.recognize() finds this editor for a flattened patch");
+
+        // ... and only a whole one. Each of these is a buffer the librarian never sends.
+        check(!RolandXV5050Rec.recognize(flattenMessages(drop(messages, 4))),
+            "a flattened patch missing a block is refused");
+        check(!RolandXV5050Rec.recognize(flattenMessages(drop(messages, 0))),
+            "a flattened patch missing its Common block is refused");
+        check(!RolandXV5050Rec.recognize(flattenMessages(two)),
+            "two flattened patches in one buffer are refused");
+        byte[][] dup = new byte[9][];
+        System.arraycopy(messages, 0, dup, 0, 9);
+        dup[8] = messages[7];
+        check(!RolandXV5050Rec.recognize(flattenMessages(dup)),
+            "a flattened patch with a repeated block is refused");
+        byte[][] mixed = new byte[9][];
+        System.arraycopy(messages, 0, mixed, 0, 9);
+        mixed[8] = RolandXV5050Sysex.dt1((byte)0x10,
+            RolandXV5050Sysex.userPatch(0) + (0x26 << 7), new byte[137]);
+        check(!RolandXV5050Rec.recognize(flattenMessages(mixed)),
+            "a flattened buffer mixing two patches' blocks is refused");
+        byte[][] trailing = new byte[10][];
+        System.arraycopy(messages, 0, trailing, 0, 9);
+        trailing[9] = RolandXV5050Sysex.dt1((byte)0x10, RolandXV5050Sysex.TEMP_PATCH, 42);
+        check(!RolandXV5050Rec.recognize(flattenMessages(trailing)),
+            "a flattened patch with a stray single-parameter DT1 is refused");
+        byte[][] rhythmRun = new byte[2][];
+        rhythmRun[0] = RolandXV5050Sysex.dt1((byte)0x10, RolandXV5050Sysex.TEMP_RHYTHM, new byte[18]);
+        rhythmRun[1] = RolandXV5050Sysex.dt1((byte)0x10,
+            RolandXV5050Sysex.TEMP_RHYTHM + (0x02 << 7), new byte[145]);
+        check(!RolandXV5050Rec.recognize(flattenMessages(rhythmRun)),
+            "a run of rhythm blocks is refused");
 
         // Eight blocks is not a patch.
         byte[][] short8 = new byte[8][];

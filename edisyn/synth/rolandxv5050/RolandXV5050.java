@@ -658,6 +658,35 @@ public class RolandXV5050 extends Synth
 
     /** Measured as 50 ms on the hardware; kept generous as margin. */
     public int getPauseAfterChangePatch() { return 300; }
+
+    /**
+       Nothing needs to settle after the synth has finished sending us a dump. Edisyn's
+       default is to inherit {@link #getPauseAfterChangePatch}, which would spend 300 ms
+       of every librarian download tick waiting for no reason.
+    */
+    public int getPauseAfterReceivePatch() { return 0; }
+
+    /**
+       How long the librarian waits for each patch of a batch download.
+
+       <p>This has to cover everything one tick of the download does, because the
+       request is issued from the timer's own thread and the pauses in it block that
+       thread: {@link #PAUSE_AFTER_MODE_SWITCH} and {@link #getPauseAfterChangePatch}
+       run before the RQ1 goes out at all, and only what is left of the tick is
+       available for the synth to load the patch and send its nine blocks back.
+       Edisyn's default of 500 ms is less than those pauses alone, so every patch after
+       the first was declared failed and re-requested -- which then put a second,
+       duplicate reply in flight and desynchronized the download from there on.
+    */
+    public int getBatchDownloadWaitTime() { return 1500; }
+
+    /**
+       Tolerate a few slow patches rather than re-requesting at the first missed tick.
+       A re-request does not cancel the reply already on its way, so the duplicate
+       arrives while the librarian has moved on, and is then rejected as an unexpected
+       patch -- one slow patch is otherwise enough to desynchronize the whole download.
+    */
+    public int getBatchDownloadFailureCountdown() { return 4; }
     /** No pause was measurable for a send to the edit buffer; kept as margin. */
     public int getPauseAfterSendAllParameters() { return 150; }
 

@@ -74,9 +74,13 @@ turned out not to be downloadable at all.
 <p>Still unverified:
 
 <ul>
-<li>the librarian's own interface -- bank upload has not been run from Edisyn, which is
-why <tt>librarianTested()</tt> still returns false. The protocol underneath it is
-proven;</li>
+<li>the librarian. Downloading the USER bank from the editor's own interface was tried
+and it found two bugs here, both now fixed: a whole patch arrives at the librarian as
+nine messages flattened into one buffer, which the recognizer did not claim, and the
+download loop's own pauses were longer than the time it allowed each patch to arrive.
+Neither fix has been run against the synth yet, and bank upload has not been run at
+all, which is why <tt>librarianTested()</tt> still returns false. The protocol
+underneath it is proven;</li>
 <li>everything to do with rhythm sets and performances, since those editors do not
 exist yet.</li>
 </ul>

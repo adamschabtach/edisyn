@@ -20,13 +20,54 @@ import edisyn.*;
 
    <p>Rhythm (<tt>1F 10</tt>, <tt>40 n0</tt>) and Performance (<tt>10</tt>, <tt>20</tt>)
    messages are deliberately not claimed; those editors get their own recognizers.
+
+   <p>{@link #recognize} has to answer for a single block <i>and</i> for all nine
+   concatenated into one buffer, because that is the form the librarian asks about.
+   See {@link #recognizeWholePatch}.
 */
 
 public class RolandXV5050Rec extends Recognize
     {
     public static boolean recognize(byte[] data)
         {
-        return blockIndex(data) >= 0;
+        if (blockIndex(data) >= 0) return true;         // one block, as a file's messages arrive
+        return recognizeWholePatch(data);
+        }
+
+    /**
+       Whether a buffer is a whole patch as one run of concatenated DT1 messages.
+
+       <p>Edisyn hands the librarian a patch through <tt>sendToLibrarian()</tt>, which
+       flattens <tt>emitAll()</tt> into a single byte array before asking the
+       recognizers about it. For a synth whose patch is one message that is the same
+       thing; ours is nine, so the flattened buffer is not itself a block and has to be
+       split before it can be recognized. Without this, every librarian download landed
+       in the library with no synth attached.
+
+       <p>The claim is deliberately tight, because the only thing that sends a buffer
+       this way is a whole patch: every message in it must be a patch block of the
+       <i>same</i> patch, each of the nine exactly once, and nothing else. Files are
+       recognized a message at a time instead, through {@link #recognize} and
+       {@link #getNextSysexPatchGroup}, which stay lenient about extra blocks.
+    */
+    static boolean recognizeWholePatch(byte[] data)
+        {
+        byte[][] messages = RolandXV5050Sysex.split(data);
+        if (messages.length < 2) return false;          // a lone message went through blockIndex()
+
+        int patchBase = base(messages[0]);
+        if (patchBase < 0) return false;
+
+        int seen = 0;
+        for (byte[] message : messages)
+            {
+            int index = blockIndex(message);
+            if (index < 0) return false;                // something that is not a patch block
+            if (base(message) != patchBase) return false;
+            if ((seen & (1 << index)) != 0) return false;
+            seen |= 1 << index;
+            }
+        return seen == (1 << RolandXV5050Params.PATCH.length) - 1;
         }
 
     /** The patch block index of a message, or -1 if it is not an XV-5050 patch block. */
