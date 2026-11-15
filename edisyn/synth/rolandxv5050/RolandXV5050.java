@@ -730,8 +730,14 @@ public class RolandXV5050 extends Synth
     public boolean getSupportsPatchWrites() { return true; }
     public boolean getSupportsBankWrites() { return false; }
 
-    /** Not yet run against the hardware. */
-    public boolean librarianTested() { return false; }
+    /**
+       Both halves have been run against an XV-5050 from the librarian's own interface,
+       2026-11-15. Downloading the USER bank gives 128 patches that compare identical,
+       patch for patch, with a dump taken independently. Uploading it, with three
+       patches renamed first so that the test could fail, changed exactly those three
+       slots and left the other 125 untouched.
+    */
+    public boolean librarianTested() { return true; }
 
     public String getPatchLocationName(Model model)
         {
