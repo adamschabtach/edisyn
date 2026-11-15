@@ -56,27 +56,34 @@ It simply cannot put a name to them: the chooser falls back to showing its last 
 a wave outside the internal list. If you fit an expansion board and want its waves named,
 that needs wave lists from the board's own manual.
 
-<h3>Not yet tested against hardware</h3>
+<h3>Tested against hardware</h3>
 
-<p>Everything here was built from the Owner's Manual and verified offline: the
-parameter table tiles each block exactly, and patches survive emit &rarr; parse &rarr;
-emit byte-identically. None of it has been run against an XV-5050 yet. In particular
-these are unverified:
+<p>This editor has been run against an XV-5050 (system version 3.00). All 128 user
+patches were dumped and every one of them parses and re-emits byte-identically. One
+request for the whole patch returns all nine blocks, and its data matches nine separate
+per-block requests. Writing to a user slot stores permanently, verified across a power
+cycle, with the rest of user memory confirmed unchanged afterwards.
+
+<p>The manual's parameter table held up: control sources are CC numbers with 32
+unnamed, patch categories are indices into the list on page 22, and the tempo-synced
+note values above 127 are in the order given here. Three things did have to change, all
+of them in this editor rather than the table: wave numbers keep the full range instead
+of being clamped, writing to stored memory needs about a second to commit, and GM2
+turned out not to be downloadable at all.
+
+<p>Still unverified:
 
 <ul>
-<li>that one request for the whole patch returns all nine blocks, rather than needing
-one request per block;</li>
-<li>the pauses after a patch change, after a Patch-mode switch, and between the nine
-messages of a patch send;</li>
-<li>that a write to a USER address stores the patch permanently;</li>
-<li>the encoding of the control-source lists (MFX Control Source, Matrix Control
-Source), where the manual's list is one shorter than the stored range and CC32 appears
-to be a hole;</li>
-<li>the Patch Category list, and the tempo-synced note values that Tone Delay Time and
-LFO Rate take above 127;</li>
-<li>the Wave Group ID the synth reports for internal waves;</li>
-<li>the GM2 banks' bank-select numbers, which is why the librarian is marked untested.</li>
+<li>the librarian's own interface -- bank upload has not been run from Edisyn, which is
+why <tt>librarianTested()</tt> still returns false. The protocol underneath it is
+proven;</li>
+<li>everything to do with rhythm sets and performances, since those editors do not
+exist yet.</li>
 </ul>
+
+<p><b>One thing worth knowing:</b> the patch edit buffer only exists while a
+<i>patch</i> is selected. If the synth has a rhythm set selected, "request current
+patch" gets no reply at all and simply times out. Select any patch and it works again.
 
 <p>The Rhythm and Performance editors are not written yet.
 
