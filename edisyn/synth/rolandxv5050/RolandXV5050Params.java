@@ -402,7 +402,7 @@ final class RolandXV5050Params
             WAVE_CHOICES[i + 1] = "" + (i + 1) + " " + WAVE_NAMES[i];
         }
 
-    static final P[] COMMON = 
+    static final P[] COMMON =
         {
         new P("category", "Patch Category", 12, 1, false, 0, 127, 0, 127, 0, 4, 0, 0.0, 0.0, true, CATEGORIES, 1, true, false, false),
         new P("tonetype", "Tone Type", 13, 1, false, 0, 1, 0, 1, 0, 4, 0, 0.0, 0.0, true, L27, 1, true, false, true),
@@ -472,7 +472,7 @@ final class RolandXV5050Params
         new P("matrixcontrol4sens4", "Matrix Control 4 Sens 4", 78, 1, false, 1, 127, 1, 127, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
         };
 
-    static final P[] MFX = 
+    static final P[] MFX =
         {
         new P("mfxtype", "MFX Type", 0, 1, false, 0, 127, 0, 127, 0, 4, 0, 0.0, 0.0, true, MFX_TYPES, 1, true, false, false),
         new P("mfxdrysendlevel", "MFX Dry Send Level", 1, 1, false, 0, 127, 0, 127, 0, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
@@ -525,7 +525,7 @@ final class RolandXV5050Params
         new P("mfxparameter32", "MFX Parameter 32", 141, 4, true, 12768, 52768, 12768, 52768, 32768, 1, -32768, 0.0, 0.0, true, null, 0, false, false, false),
         };
 
-    static final P[] CHORUS = 
+    static final P[] CHORUS =
         {
         new P("chorustype", "Chorus Type", 0, 1, false, 0, 3, 0, 3, 0, 4, 0, 0.0, 0.0, true, L15, 1, true, false, false),
         new P("choruslevel", "Chorus Level", 1, 1, false, 0, 127, 0, 127, 0, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
@@ -545,7 +545,7 @@ final class RolandXV5050Params
         new P("chorusparameter12", "Chorus Parameter 12", 48, 4, true, 12768, 52768, 12768, 52768, 32768, 1, -32768, 0.0, 0.0, true, null, 0, false, false, false),
         };
 
-    static final P[] REVERB = 
+    static final P[] REVERB =
         {
         new P("reverbtype", "Reverb Type", 0, 1, false, 0, 5, 0, 5, 0, 4, 0, 0.0, 0.0, true, L17, 1, true, false, false),
         new P("reverblevel", "Reverb Level", 1, 1, false, 0, 127, 0, 127, 0, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
@@ -572,7 +572,7 @@ final class RolandXV5050Params
         new P("reverbparameter20", "Reverb Parameter 20", 79, 4, true, 12768, 52768, 12768, 52768, 32768, 1, -32768, 0.0, 0.0, true, null, 0, false, false, false),
         };
 
-    static final P[] TMT = 
+    static final P[] TMT =
         {
         new P("structuretype1and2", "Structure Type 1 & 2", 0, 1, false, 0, 9, 0, 9, 0, 1, 1, 0.0, 0.0, true, null, 0, false, true, false),
         new P("booster1and2", "Booster 1 & 2", 1, 1, false, 0, 3, 0, 3, 0, 4, 0, 0.0, 0.0, true, L38, 1, false, true, false),
@@ -617,7 +617,7 @@ final class RolandXV5050Params
         new P("tmt4velocityfadewidthupper", "TMT4 Velocity Fade Width Upper", 40, 1, false, 0, 127, 0, 127, 0, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
         };
 
-    static final P[] TONE1 = 
+    static final P[] TONE1 =
         {
         new P("tone1level", "Tone Level", 0, 1, false, 0, 127, 0, 127, 100, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
         new P("tone1coarsetune", "Tone Coarse Tune", 1, 1, false, 16, 112, 16, 112, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
@@ -746,7 +746,7 @@ final class RolandXV5050Params
         new P("tone1lfo2pandepth", "LFO2 Pan Depth", 136, 1, false, 1, 127, 1, 127, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
         };
 
-    static final P[] TONE2 = 
+    static final P[] TONE2 =
         {
         new P("tone2level", "Tone Level", 0, 1, false, 0, 127, 0, 127, 100, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
         new P("tone2coarsetune", "Tone Coarse Tune", 1, 1, false, 16, 112, 16, 112, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
@@ -875,7 +875,7 @@ final class RolandXV5050Params
         new P("tone2lfo2pandepth", "LFO2 Pan Depth", 136, 1, false, 1, 127, 1, 127, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
         };
 
-    static final P[] TONE3 = 
+    static final P[] TONE3 =
         {
         new P("tone3level", "Tone Level", 0, 1, false, 0, 127, 0, 127, 100, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
         new P("tone3coarsetune", "Tone Coarse Tune", 1, 1, false, 16, 112, 16, 112, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
@@ -1004,7 +1004,7 @@ final class RolandXV5050Params
         new P("tone3lfo2pandepth", "LFO2 Pan Depth", 136, 1, false, 1, 127, 1, 127, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
         };
 
-    static final P[] TONE4 = 
+    static final P[] TONE4 =
         {
         new P("tone4level", "Tone Level", 0, 1, false, 0, 127, 0, 127, 100, 0, 0, 0.0, 0.0, true, null, 0, false, true, false),
         new P("tone4coarsetune", "Tone Coarse Tune", 1, 1, false, 16, 112, 16, 112, 64, 1, -64, 0.0, 0.0, true, null, 0, false, true, false),
