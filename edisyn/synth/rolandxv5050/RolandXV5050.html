@@ -62,7 +62,9 @@ that needs wave lists from the board's own manual.
 patches were dumped and every one of them parses and re-emits byte-identically. One
 request for the whole patch returns all nine blocks, and its data matches nine separate
 per-block requests. Writing to a user slot stores permanently, verified across a power
-cycle, with the rest of user memory confirmed unchanged afterwards.
+cycle, with the rest of user memory confirmed unchanged afterwards. The librarian
+downloads all 128 USER patches in one run, and the bank it saves compares identical,
+patch for patch, against a dump taken independently.
 
 <p>The manual's parameter table held up: control sources are CC numbers with 32
 unnamed, patch categories are indices into the list on page 22, and the tempo-synced
@@ -74,13 +76,13 @@ turned out not to be downloadable at all.
 <p>Still unverified:
 
 <ul>
-<li>the librarian. Downloading the USER bank from the editor's own interface was tried
-and it found two bugs here, both now fixed: a whole patch arrives at the librarian as
-nine messages flattened into one buffer, which the recognizer did not claim, and the
-download loop's own pauses were longer than the time it allowed each patch to arrive.
-Neither fix has been run against the synth yet, and bank upload has not been run at
-all, which is why <tt>librarianTested()</tt> still returns false. The protocol
-underneath it is proven;</li>
+<li>bank <b>upload</b> from the librarian, which is why <tt>librarianTested()</tt>
+still returns false. Downloading is done: the first GUI run of it found two bugs here,
+both since fixed -- a whole patch reaches the librarian as nine messages flattened into
+one buffer, which the recognizer did not claim, and the download loop's own pauses were
+longer than the window it allowed each patch to arrive in. With those fixed all 128
+USER patches download in one run, and the bank Edisyn saved compares identical to a
+dump taken independently, patch for patch;</li>
 <li>everything to do with rhythm sets and performances, since those editors do not
 exist yet.</li>
 </ul>
